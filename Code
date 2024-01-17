@@ -1,0 +1,294 @@
+import keras
+import sys
+import scipy
+from scipy.sparse import hstack
+import matplotlib
+from matplotlib import pyplot as plt
+import numpy as np
+import pandas as pd
+from pandas import read_csv
+from pandas.plotting import scatter_matrix
+import tensorflow as tf
+import sklearn
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import StratifiedKFold
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.naive_bayes import GaussianNB
+from sklearn.svm import SVC
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import cross_val_score, KFold
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.ensemble import StackingClassifier
+from sklearn.utils import resample
+from sklearn.metrics import recall_score, precision_score, confusion_matrix, roc_auc_score
+from imblearn.over_sampling import SMOTE
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, BatchNormalization, Activation
+from keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping
+from statsmodels.stats.contingency_tables import mcnemar
+import seaborn as sns
+from google.colab import drive
+drive.mount('/content/drive')
+data = "/content/drive/MyDrive/data.csv"
+df = pd.read_csv(data)
+X = df.iloc[:, 0:12]
+y = df.iloc[:, 12]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+missing_categories = set(X_train) - set(X_test)
+column_names = X_train.columns.tolist()
+numerical_features = ['Age', 'Weight', 'SignsDays', 'Admission2Sx']
+categorical_features = ['DOW', 'Breed', 'Sex', 'FrankelScore', 'Myelo', 'Surgeon', 'Surgery', 'Fen']
+X_train_numeric = X_train[numerical_features]
+X_train_categorical = X_train[categorical_features]
+X_test_numeric = X_test[numerical_features]
+X_test_categorical = X_test[categorical_features]
+imputer = SimpleImputer(strategy='constant', fill_value=0)
+X_test_imputed_categorical = pd.DataFrame(imputer.fit_transform(X_test_categorical),
+                               columns=categorical_features)
+scaler = StandardScaler()
+X_train_transformed_numeric = scaler.fit_transform(X_train_numeric)
+X_test_transformed_numeric = scaler.transform(X_test_numeric)
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
+    ],
+    remainder='passthrough'
+)
+X_train_transformed_categorical = preprocessor.fit_transform(X_train_categorical)
+X_test_transformed_categorical = preprocessor.transform(X_test_imputed_categorical)
+X_train_transformed_numeric_2 = np.reshape(X_train_transformed_numeric, (-1, X_train_transformed_numeric.shape[1]))
+X_train_transformed_categorical_2 = np.reshape(X_train_transformed_categorical, (-1, X_train_transformed_categorical.shape[1]))
+X_test_transformed_numeric_2 = np.reshape(X_test_transformed_numeric, (-1, X_test_transformed_numeric.shape[1]))
+X_test_transformed_categorical_2 = np.reshape(X_test_transformed_categorical, (-1, X_test_transformed_categorical.shape[1]))
+X_train_transformed = hstack([X_train_transformed_numeric_2, X_train_transformed_categorical_2])
+X_test_transformed = hstack([X_test_transformed_numeric_2, X_test_transformed_categorical_2])
+X_train_dense = X_train_transformed.toarray()
+X_test_dense = X_test_transformed.toarray()
+model = Sequential()
+model.add(Dense(units=56, activation='relu', input_shape=(56,)))
+model.add(Dense(units=28, activation='relu'))
+model.add(Dropout(rate=0.3739275465882979))
+model.add(Dense(units=14, activation='relu'))
+model.add(Dropout(rate=0.3739275465882979))
+model.add(Dense(units=7, activation='relu'))
+model.add(Dense(units=1, activation='sigmoid'))
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+model.fit(X_train_dense, y_train, epochs=100, batch_size=25, validation_split=0.2)
+y_pred = model.predict(X_test_dense)
+y_pred = (y_pred > 0.5).astype(int)
+_, accuracy = model.evaluate(X_train_dense, y_train)
+print('Train accuracy: %.2f' % (accuracy*100))
+_, accuracy = model.evaluate(X_test_dense, y_test)
+print('Test accuracy: %.2f' % (accuracy*100))
+y_pred_train = (model.predict(X_train_dense) > 0.5).astype(int)
+cm_train = confusion_matrix(y_train, y_pred_train)
+print("Confusion Matrix (Training Set):")
+print(cm_train)
+classification_rep = classification_report(y_train, y_pred_train)
+print("Classification Report:\n", classification_rep)
+sns.heatmap(cm_train, annot=True, fmt="d", cmap="Blues")
+plt.title('Confusion Matrix - Training Set')
+plt.xlabel('Predicted Labels')
+plt.ylabel('True Labels')
+plt.show()
+cm_test = confusion_matrix(y_test, y_pred)
+print("Confusion Matrix (Test Set):")
+print(cm_test)
+classification_rep = classification_report(y_test, y_pred)
+print("Classification Report:\n", classification_rep)
+sns.heatmap(cm_test, annot=True, fmt="d", cmap="Blues")
+plt.title('Confusion Matrix - Test Set')
+plt.xlabel('Predicted Labels')
+plt.ylabel('True Labels')
+plt.show()
+conf_matrix = confusion_matrix(y_test, y_pred)
+print("Confusion Matrix:\n", conf_matrix)
+classification_rep = classification_report(y_test, y_pred)
+print("Classification Report:\n", classification_rep)
+auc = roc_auc_score(y_train, y_pred_train)
+print(f'AUC train: {auc:.4f}')
+auc = roc_auc_score(y_test, y_pred)
+print(f'AUC test: {auc:.4f}')
+logistic_regression_model = LogisticRegression()
+logistic_regression_model.fit(X_train_dense, y_train)
+logistic_regression_model2 = LogisticRegression()
+logistic_regression_model2.fit(X_test_dense, y_test)
+y_pred_train_lr = logistic_regression_model.predict(X_train_dense)
+y_pred_lr = logistic_regression_model2.predict(X_test_dense)
+accuracy_train_lr = accuracy_score(y_train, y_pred_train_lr)
+accuracy_test_lr = accuracy_score(y_test, y_pred_lr)
+print(f'Logistic Regression Accuracy Train: {accuracy_train_lr:.2f}')
+print(f'Logistic Regression Accuracy Test: {accuracy_test_lr:.2f}')
+print("Classification Report Train:")
+print(classification_report(y_train, y_pred_train_lr))
+conf_matrix_train_lr = confusion_matrix(y_train, y_pred_train_lr)
+print(conf_matrix_train_lr)
+print("Classification Report Test:")
+print(classification_report(y_test, y_pred_lr))
+conf_matrix_test_lr = confusion_matrix(y_test, y_pred_lr)
+print(conf_matrix_test_lr)
+true_labels_train = y_train
+predicted_labels_train = model.predict(X_train_dense)
+n_bootstraps = 1000
+bootstrapped_sensitivity = np.zeros(n_bootstraps)
+bootstrapped_specificity = np.zeros(n_bootstraps)
+bootstrapped_ppv = np.zeros(n_bootstraps)
+bootstrapped_npv = np.zeros(n_bootstraps)
+bootstrapped_auroc = np.zeros(n_bootstraps)
+for i in range(n_bootstraps):
+    resampling_index = resample(range(len(true_labels_train)))
+    resampled_true_labels_train = true_labels_train.iloc[resampling_index]
+    resampled_predicted_labels_train = predicted_labels_train[resampling_index]
+    binary_predictions_train = (resampled_predicted_labels_train >= 0.5).astype(int)
+    tn, fp, fn, tp = confusion_matrix(resampled_true_labels_train, binary_predictions_train).ravel()
+    sensitivity = recall_score(resampled_true_labels_train, binary_predictions_train)
+    specificity = tn / (tn + fp)
+    ppv = precision_score(resampled_true_labels_train, binary_predictions_train)
+    npv = tn / (tn + fn)
+    auroc = roc_auc_score(resampled_true_labels_train, binary_predictions_train)
+    bootstrapped_sensitivity[i] = sensitivity
+    bootstrapped_specificity[i] = specificity
+    bootstrapped_ppv[i] = ppv
+    bootstrapped_npv[i] = npv
+    bootstrapped_auroc[i] = auroc
+confidence_interval_sensitivity = np.percentile(bootstrapped_sensitivity, [2.5, 97.5])
+confidence_interval_specificity = np.percentile(bootstrapped_specificity, [2.5, 97.5])
+confidence_interval_ppv = np.percentile(bootstrapped_ppv, [2.5, 97.5])
+confidence_interval_npv = np.percentile(bootstrapped_npv, [2.5, 97.5])
+confidence_interval_auroc = np.percentile(bootstrapped_auroc, [2.5, 97.5])
+print(f"Train - 95% Confidence Interval for Sensitivity: {confidence_interval_sensitivity}")
+print(f"Train - 95% Confidence Interval for Specificity: {confidence_interval_specificity}")
+print(f"Train - 95% Confidence Interval for PPV: {confidence_interval_ppv}")
+print(f"Train - 95% Confidence Interval for NPV: {confidence_interval_npv}")
+print(f"Train - 95% Confidence Interval for AUROC: {confidence_interval_auroc}")
+true_labels = y_test
+predicted_labels = model.predict(X_test_dense)
+n_bootstraps = 1000
+bootstrapped_sensitivity = np.zeros(n_bootstraps)
+bootstrapped_specificity = np.zeros(n_bootstraps)
+bootstrapped_ppv = np.zeros(n_bootstraps)
+bootstrapped_npv = np.zeros(n_bootstraps)
+bootstrapped_auroc = np.zeros(n_bootstraps)
+for i in range(n_bootstraps):
+    resampled_true_labels = resample(true_labels)
+    resampled_predicted_labels = resample(predicted_labels)
+    binary_predictions = (resampled_predicted_labels >= 0.5).astype(int)
+    tn, fp, fn, tp = confusion_matrix(resampled_true_labels, binary_predictions).ravel()
+    sensitivity = recall_score(resampled_true_labels, binary_predictions)
+    specificity = tn / (tn + fp)
+    ppv = precision_score(resampled_true_labels, binary_predictions)
+    npv = tn / (tn + fn)
+    auroc = roc_auc_score(resampled_true_labels, binary_predictions)
+    bootstrapped_sensitivity[i] = sensitivity
+    bootstrapped_specificity[i] = specificity
+    bootstrapped_ppv[i] = ppv
+    bootstrapped_npv[i] = npv
+    bootstrapped_auroc[i] = auroc
+confidence_interval_sensitivity = np.percentile(bootstrapped_sensitivity, [2.5, 97.5])
+confidence_interval_specificity = np.percentile(bootstrapped_specificity, [2.5, 97.5])
+confidence_interval_ppv = np.percentile(bootstrapped_ppv, [2.5, 97.5])
+confidence_interval_npv = np.percentile(bootstrapped_npv, [2.5, 97.5])
+confidence_interval_auroc = np.percentile(bootstrapped_auroc, [2.5, 97.5])
+print(f"Test - 95% Confidence Interval for Sensitivity: {confidence_interval_sensitivity}")
+print(f"Test - 95% Confidence Interval for Specificity: {confidence_interval_specificity}")
+print(f"Test - 95% Confidence Interval for PPV: {confidence_interval_ppv}")
+print(f"Test - 95% Confidence Interval for NPV: {confidence_interval_npv}")
+print(f"Test - 95% Confidence Interval for AUROC: {confidence_interval_auroc}")
+actual_labels = y_test 
+pred_labels_model1 = y_pred_train  
+pred_labels_model2 = y_pred_train_lr
+conf_matrix = np.zeros((2, 2), dtype=int)
+for actual, pred_model1, pred_model2 in zip(actual_labels, pred_labels_model1, pred_labels_model2):
+    if actual == 1 and pred_model1 == 0 and pred_model2 == 1:
+        conf_matrix[0, 0] += 1
+    elif actual == 0 and pred_model1 == 1 and pred_model2 == 0:
+        conf_matrix[1, 0] += 1
+result = mcnemar(conf_matrix, exact=False)
+statistic, p_value = result.statistic, result.pvalue
+alpha = 0.05
+print(f"McNemar's test statistic - train: {statistic}")
+print(f"P-value: {p_value}")
+if p_value < alpha:
+    print("There is a significant difference between the models.")
+else:
+    print("There is no significant difference between the models.")
+actual_labels = y_test  # Replace with your actual test labels
+pred_labels_model3 = y_pred  # Replace with your predictions from model 1
+pred_labels_model4 = y_pred_lr  # Replace with your predictions from model 2
+conf_matrix = np.zeros((2, 2), dtype=int)
+for actual, pred_model3, pred_model4 in zip(actual_labels, pred_labels_model3, pred_labels_model4):
+    if actual == 1 and pred_model3 == 0 and pred_model4 == 1:
+        conf_matrix[0, 0] += 1
+    elif actual == 0 and pred_model3 == 1 and pred_model4 == 0:
+        conf_matrix[1, 0] += 1
+result = mcnemar(conf_matrix, exact=False)
+statistic, p_value = result.statistic, result.pvalue
+alpha = 0.05
+print(f"McNemar's test statistic - test: {statistic}")
+print(f"P-value: {p_value}")
+if p_value < alpha:
+    print("There is a significant difference between the models.")
+else:
+    print("There is no significant difference between the models.")
+!pip install optuna
+import optuna
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping
+from sklearn.metrics import recall_score, accuracy_score, f1_score, precision_score
+import numpy as np
+def create_model(trial):
+    learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-2)
+    model = Sequential()
+    model.add(Dense(units=56, activation='relu', input_shape=(56,)))
+    model.add(Dense(units=28, activation='relu'))
+    model.add(Dropout(rate=0.5))
+    model.add(Dense(units=14, activation='relu'))
+    model.add(Dense(units=1, activation='sigmoid'))
+    model.compile(optimizer=Adam(learning_rate), loss='binary_crossentropy', metrics=['accuracy'])
+    return model, EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+def objective(trial):
+    model, early_stopping = create_model(trial)
+    units_layer1 = trial.suggest_int('units_layer1', 56, 56)
+    units_layer2 = trial.suggest_int('units_layer2', 24, 48)
+    units_layer3 = trial.suggest_int('units_layer3', 8, 24)
+    epochs = trial.suggest_int('epochs', 20, 120)
+    batch_size = trial.suggest_int('batch_size', 8, 64)
+    dropout_rate = trial.suggest_uniform('dropout_rate', 0.0, 0.5)
+    model.fit(X_train_dense, y_train, validation_split=0.2, epochs=epochs, batch_size=batch_size, callbacks=[early_stopping])
+    y_train_pred_proba = model.predict(X_train_dense)
+    y_test_pred_proba = model.predict(X_test_dense)
+    y_train_pred = (y_train_pred_proba > 0.5).astype(int)
+    y_test_pred = (y_test_pred_proba > 0.5).astype(int)
+    train_recall = recall_score(y_train, y_train_pred)
+    test_recall = recall_score(y_test, y_test_pred)
+    weighted_recall = 0.3 * train_recall + 0.7 * test_recall
+    return -weighted_recall  # Negative because Optuna minimizes the objective function
+study = optuna.create_study(direction='minimize')
+study.optimize(objective, n_trials=100)
+best_params = study.best_params
+print("Best Hyperparameters:", best_params)
+final_model, early_stopping = create_model(study.best_trial)
+final_model.fit(X_train_dense, y_train, epochs=best_params['epochs'], batch_size=best_params['batch_size'], verbose=1, callbacks=[early_stopping])
+final_y_test_pred_proba = final_model.predict(X_test_dense)
+final_y_test_pred = (final_y_test_pred_proba > 0.5).astype(int)
+final_test_recall = recall_score(y_test, final_y_test_pred)
+print(f"Final Test Recall: {final_test_recall:.2f}")
