@@ -1,0 +1,1 @@
+Code for "Development and assessment of a deep neural network to predict functional outcome and perioperative adverse events after decompressive thoracolumbar hemilaminectomy for canine acute intervertebral disc extrusion: a retrospective cohort study of 460 cases"
